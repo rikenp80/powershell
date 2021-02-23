@@ -1,1 +1,0 @@
-Enable-PSRemoting -force

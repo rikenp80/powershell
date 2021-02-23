@@ -4,7 +4,7 @@ Backup all database in the current environment
 example execution
 C:\Powershell\BackupDBs.ps1 -ServersList "mtrdata1" -Retention_Days 7 -Min_Full_Diff_Time_Gap 12 -BackupType "Full" -DB_Include "subaccount" -BackupDirectory "I:\Backups"
 #>
-
+#test
 
 param
 (
@@ -12,7 +12,7 @@ param
   $BackupType,              #Full, Diff or Log
   $DB_Include = "",         #Specify which databases should be backed up
   $DB_Exclude = "",         #Specify which databases should not be backed up, all other databases will get backed up
-  $Retention_Days = 60,      #retention period for backups in days
+  $Retention_Days = 30,      #retention period for backups in days
 # $Retention_Days_Diff = 7,     #retention period for Differential and log backups in days
   $Min_Full_Diff_Time_Gap = 0,   #minimum number of hours between full and diff backup
   $BackupDirectory = ""        #Location where backups should go to. A folder will be created for each database in the $BackupDirectory.
@@ -42,7 +42,7 @@ if ($PSVersionTable.PSVersion.Major -le 2)
 else
 {
     # Import the SQLPS module so that the Invoke-SQLCMD command works
-    Import-Module “sqlps” -DisableNameChecking
+    Import-Module "sqlps" -DisableNameChecking
 }
 
 
@@ -104,6 +104,8 @@ try
 
 			if  (
                     $dbName -eq "tempdb" -or
+                    $dbName -eq "distribution" -or
+                    $dbName -eq "model" -or
                     ($dbName -eq "master" -and $BackupType -eq "Diff") -or
                     $db.Status -notlike "Normal*" -or
                     ($DB_Include_Split -ne "" -and $DB_Include_Split -contains $dbName -eq $false) -or
@@ -191,11 +193,11 @@ try
 
             if ($BackupType -eq "Log")
             {
-                $targetPath = $BackupDirectory_DB  + "\" + $dbName + "_" + $BackupType + "_" + $timestamp + ".TRN"
+                $targetPath = $BackupDirectory_DB  + "\" + $dbName + "_" + $timestamp + "_" + $BackupType + ".TRN"
             }
             else
             {
-                $targetPath = $BackupDirectory_DB  + "\" + $dbName + "_" + $BackupType + "_" + $timestamp + ".BAK"
+                $targetPath = $BackupDirectory_DB  + "\" + $dbName + "_" + $timestamp + "_" + $BackupType + ".BAK"
             }
             
             
