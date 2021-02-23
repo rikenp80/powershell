@@ -4,17 +4,15 @@ Backup all database in the current environment
 example execution
 C:\Powershell\BackupDBs.ps1 -ServersList "mtrdata1" -Retention_Days 7 -Min_Full_Diff_Time_Gap 12 -BackupType "Full" -DB_Include "subaccount" -BackupDirectory "I:\Backups"
 #>
-#test
 
 param
 (
-  $ServersList,              #Specify which servers should be backed up
+  $ServersList = (hostname),              #Specify which servers should be backed up
   $BackupType,              #Full, Diff or Log
   $DB_Include = "",         #Specify which databases should be backed up
   $DB_Exclude = "",         #Specify which databases should not be backed up, all other databases will get backed up
   $Retention_Days = 30,      #retention period for backups in days
 # $Retention_Days_Diff = 7,     #retention period for Differential and log backups in days
-  $Min_Full_Diff_Time_Gap = 0,   #minimum number of hours between full and diff backup
   $BackupDirectory = ""        #Location where backups should go to. A folder will be created for each database in the $BackupDirectory.
 )
 
@@ -61,7 +59,6 @@ try
 	$DB_Exclude_Split = $DB_Exclude.split(",")
 
 
-
     # Gets the list of servers from DB table if the parameter is not specified
     if ($ServersList -eq "")
     {
@@ -85,6 +82,9 @@ try
         #get SQL instance name
         $Instance = (Invoke-Sqlcmd -ServerInstance $server_instance -database "master" -Query "SELECT CASE WHEN @@SERVICENAME = 'MSSQLSERVER' THEN '' ELSE @@SERVICENAME END").Column1
 
+        
+        #add instance name to backup path if it is a named sql instance
+        if ($Instance -ne "") {$BackupDirectory += "\" + $Instance}
    	      	
 
 		# loop through all DBs on server and backup
@@ -92,7 +92,7 @@ try
         {
             $dbName = $db.Name
             $LastFullBackupDate = $db.LastBackupDate                            
-                          
+          
                 
             #do not backup the current DB if:
             #1. DB is tempdb
@@ -108,8 +108,9 @@ try
                     $dbName -eq "model" -or
                     ($dbName -eq "master" -and $BackupType -eq "Diff") -or
                     $db.Status -notlike "Normal*" -or
+                    $db.IsAccessible -eq $false -or
                     ($DB_Include_Split -ne "" -and $DB_Include_Split -contains $dbName -eq $false) -or
-                    $DB_Exclude_Split -contains $dbName -eq $true
+                    $DB_Exclude_Split -contains $dbName -eq $true                
                 )                   
 				{continue}
        
@@ -122,19 +123,23 @@ try
             # determine if a backup has previously occured, if not, and the BackupType is not Full then ignore this DB
             if ($LastFullBackupDate -eq "Monday, January 01, 0001 12:00:00 AM" -and $BackupType -ne "Full")
                 {continue}
-            
+                       
 
-            # skip the diff backup if a full backup has been taken more recently than allowed by $Min_Full_Diff_Time_Gap parameter
-            if ($BackupType -eq "Diff" -and $LastFullBackupDate -gt (get-date).addhours(-$Min_Full_Diff_Time_Gap))
-                {continue}
-            
             # skip backup if a Full or Diff backup is already running
             $DB_BackupRunning = $Server_SQL.EnumProcesses() | where-object {$_.Command -eq "BACKUP DATABASE"} | Select Database -ExpandProperty Database
             
+
             if ($DB_BackupRunning -contains $dbName -eq $true -and $BackupType -ne "Log")
                 {continue}
 
+
+            # skip backup if DB is a replication subscriber
+            $query = "if exists (select * from sys.tables where name = 'MSreplication_subscriptions') select publisher from MSreplication_subscriptions"
+            $subscriber_db = Invoke-Sqlcmd -ServerInstance $Server_SQL -database $dbName -Query $query -QueryTimeout 65535  
             
+            if ($subscriber_db -ne $null)
+                {continue}
+
              
 
             # set backup object
@@ -160,29 +165,16 @@ try
             #set backup file name and path
             $targetPath = $null
 
-
-            # if $BackupDirectory has not been definied in the parameters then get the backup location from the dbmanagement database
-            if ($BackupDirectory -eq "")
-            {
-                $BackupDirectory = (&(Join-Path $PSScriptRoot 'GetServerList.ps1') | Where {$_.ServerName -eq $server_instance}).BackupPath
-            }
-
+        
+            #check if the backup drive exists, if not then loop to next DB
             $BackupDrive = $BackupDirectory.substring(0,2)
 
-
-
-            #check if the backup drive exists, if not then loop to next DB
             $script={param($BackupDrive); If (-not(Test-Path $BackupDrive)) {Write-Output "0"}}
             
             $BackupDriveExists = invoke-command -computername $Server -scriptblock $script -ArgumentList $BackupDrive
                             
             if ($BackupDriveExists -eq 0) {continue}
-
        
-
-            #add instance name to backup path if it is a named sql instance
-            if ($Instance -ne "") {$BackupDirectory += "\" + $Instance}
-         
 
             
             #set backup file path based on the type of backup
@@ -264,4 +256,3 @@ catch
 
     [System.Environment]::Exit(1)
 }
-

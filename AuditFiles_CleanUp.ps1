@@ -1,4 +1,4 @@
-﻿<#
+ <#
 compress archive folders older than the current day
 delete the source files and folder
 delete old zip files
@@ -27,6 +27,10 @@ $FoldersToZip = Get-ChildItem -Path ($AuditRootDir + "\Archive_*") | Where-Objec
 foreach($SourceFolder in $FoldersToZip)
 {    
     $DestinationZip = $SourceFolder + ".zip"
+    if (Test-Path $DestinationZip)
+    {
+    $DestinationZip=$SourceFolder + "_1.zip"
+    }
 
     write-output "$SourceFolder -> $DestinationZip"
     
@@ -39,7 +43,6 @@ foreach($SourceFolder in $FoldersToZip)
 
 #clean up old zip files
 $RetentionDate = (get-date).AddMonths(-$RetentionMonths).ToString("yyyyMMdd")
-$RetentionDate
 
 $ZipFiles = Get-ChildItem -Path $AuditRootDir | Where-Object {$_.Extension -eq ".zip"} | Select -ExpandProperty FullName
 
@@ -54,4 +57,4 @@ foreach($File in $ZipFiles)
 
         Remove-Item $File -Force
     }
-}
+} 

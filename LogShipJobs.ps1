@@ -37,11 +37,15 @@ write-output "AG Secondary: $SecondaryReplicaName"
 write-output "LS Target: $LS_Target"
 
 
+#if either the primary or secondaey server is null then do not proceed
+if ($PrimaryReplicaName -eq $null -or $PrimaryReplicaName -eq $null) {break}
+
 
 #enable log shipping jobs that have the name of the primary AG in it
 #disable log shipping jobs that have the name of the secondary AG in it
 foreach($job in $sql_LS_Target.JobServer.Jobs)
 { 
+
     if  (
             ($job.Name -like "LSCopy*" -or $job.Name -like "LSRestore*") -and
             $job.Name -like "*" + $PrimaryReplicaName + "*" -and
@@ -75,7 +79,9 @@ foreach($job in $sql_LS_Target.JobServer.Jobs)
 #enable log shipping backup jobs on the primary AG and disable the secondary AG
 #after an AG failover the jobs do not enable/disable themselves
 foreach($job in $sql_PrimaryReplica.JobServer.Jobs)
-{ 
+
+{
+
     if  (
             $job.Name -like "LSBackup*" -and
             $job.IsEnabled -ne $true
@@ -92,6 +98,7 @@ foreach($job in $sql_PrimaryReplica.JobServer.Jobs)
 
 foreach($job in $sql_SecondaryReplica.JobServer.Jobs)
 { 
+
     if  (
             $job.Name -like "LSBackup*" -and
             $job.IsEnabled -ne $false
@@ -107,16 +114,20 @@ foreach($job in $sql_SecondaryReplica.JobServer.Jobs)
 
 
 
-#move missing .trn backup files from primary AG to log shipping target server
+#move missing .trn backup files from secondary AG to log shipping target server
 #after an AG failover, the last backup file will not get copied over
-$LS_DBs = (invoke-sqlcmd -ServerInstance $sql_LS_Target -Database "msdb" -Query "select secondary_database from msdb.dbo.log_shipping_secondary_databases").secondary_database
 
+
+$LS_DBs = (invoke-sqlcmd -ServerInstance $sql_LS_Target -Database "msdb" -Query "select secondary_database from msdb.dbo.log_shipping_secondary_databases").secondary_database
 
 foreach($db in $LS_DBs)
 { 
     cd c:
 
-    $SourcePath = "\\" + $sql_PrimaryReplica.NetName + "\epro\" + $db + "\*.trn"
+    $TrimPos = $SecondaryReplicaName.indexof("\")
+    $SecondaryServerName = $SecondaryReplicaName.substring(0, $TrimPos)
+
+    $SourcePath = "\\" + $sql_SecondaryReplica.NetName + "\epro\" + $db + "\*.trn"
     $TargetPath = $Backup_TargetPath + "\" + $db + "*.trn"
 
     Write-Output "------------------------"
@@ -125,6 +136,7 @@ foreach($db in $LS_DBs)
     
     $SourceFiles = Get-ChildItem -Path $SourcePath | Where-Object LastWriteTime -ge ((Get-Date).AddMinutes(-30)) | Select-Object Name, FullName
     $TargetFiles = Get-ChildItem -Path $TargetPath | Where-Object LastWriteTime -ge ((Get-Date).AddMinutes(-30)) | Select-Object Name, FullName
+
 
     $SourceFiles.Count
     $TargetFiles.Count
@@ -180,3 +192,7 @@ $SQLQuery =  "
 write-output $Query
 
 invoke-sqlcmd -ServerInstance $LS_Target -Database "msdb" -Query $SQLQuery
+
+
+#delete tlog backup files from the log shipping target server after 2 days
+#Get-ChildItem -Path $Backup_TargetPath | Where-Object {$_.LastWriteTime -le ((Get-Date).AddDays(-2)) } | Remove-Item -Force

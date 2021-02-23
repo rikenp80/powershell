@@ -1,4 +1,4 @@
-<#
+ <#
 Translate SQL Audit files to csv files using bcp and move the files into an archive folder based on the day of the file
 
 example execution
@@ -11,7 +11,7 @@ param
     $SourceDir,
     $TargetDir,
     $ArchiveDir,
-    $RetentionMonths = 3
+    $RetentionMonths = 2
 )
 
 
@@ -77,6 +77,7 @@ foreach($SourceFile in $SourceFiles)
 
         #set the bcp command and execute
         $bcp = "bcp """ + $Query + """ queryout "+ $TargetFileFullPath +" -c -t"","" -T -S " + $env:computername
+        $bcp
         Invoke-Expression -command $bcp
 
 
@@ -98,3 +99,4 @@ foreach($SourceFile in $SourceFiles)
         [System.Environment]::Exit(1)
     }
 }
+ 

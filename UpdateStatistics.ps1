@@ -8,7 +8,7 @@ C:\Powershell\UpdateStatistics.ps1 -ServersList "SWL2K12PMON1VM"
 
 param
 (
-  $ServersList
+  $ServersList = (hostname)
 )
 
 
@@ -42,7 +42,7 @@ try
 		# loop through all DBs on server and backup
 		foreach($db in $Server_SQL.Databases)
         {
-            if ($db.IsSystemObject -eq $false)
+            if ($db.IsSystemObject -eq $false -and $db.Status -like "Normal*" -and $db.IsUpdateable -eq $true)
             {
             $db.Name
             $db.UpdateIndexStatistics()
