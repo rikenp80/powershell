@@ -6,14 +6,14 @@ $i = 0
 
         New-PSDrive -Name P -PSProvider FileSystem -Root \\DISKSTATION\photo\Family
         
-        $source_path = "C:\Users\rik_e\Pictures\Transfer\Photo"
+        $source_path = $home + "\Pictures\Transfer\photo"
 
 		$files=Get-ChildItem $source_path
 
-        $processed_out_file = "C:\Users\rik_e\Pictures\Transfer\logs\photo\processed_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"
-        $duplicates_delete_out_file = "C:\Users\rik_e\Pictures\Transfer\logs\photo\duplicates_delete_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"
-        $duplicates_by_name_out_file = "C:\Users\rik_e\Pictures\Transfer\logs\photo\duplicates_delete_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"
-        $errors_out_file = "C:\Users\rik_e\Pictures\Transfer\logs\photo\errors_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"
+        $processed_out_file = $home + "\Pictures\Transfer\logs\photo\processed_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"
+        $duplicates_delete_out_file = $home + "\Pictures\Transfer\logs\photo\duplicates_delete_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"
+        $duplicates_by_name_out_file = $home + "\Pictures\Transfer\logs\photo\duplicates_delete_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"
+        $errors_out_file = $home + "\Pictures\Transfer\logs\photo\errors_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"
 
         $duplicate_count = 0
         $errors_count = 0
