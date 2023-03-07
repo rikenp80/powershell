@@ -7,7 +7,7 @@ $i = 0
         New-PSDrive -Name P -PSProvider FileSystem -Root \\DISKSTATION\photo\Family
         
         $source_path = $home + "\Pictures\Transfer\photo"
-
+        $source_path
 		$files=Get-ChildItem $source_path
 
         $processed_out_file = $home + "\Pictures\Transfer\logs\photo\processed_" + (Get-Date -Format yyyy_MM_dd_HHmmss) + ".txt"

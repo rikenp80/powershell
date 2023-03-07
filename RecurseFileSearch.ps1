@@ -1,7 +1,7 @@
 ﻿cls
-$source_path =  ""
+$source_path =  "C:\Users\riken\Downloads\"
 
-$files = dir $source_path -recurse | where {$_.extension -in ".jpg",".png" -and $_.PsIsContainer -eq $false } | Select Fullname -ExpandProperty Fullname
+$files = dir $source_path -recurse | where {$_.extension -in ".jpg",".png",".jpeg" -and $_.PsIsContainer -eq $false } | Select Fullname -ExpandProperty Fullname
 
 #$files = gci -Recurse $source_path -Filter *.jpg, *.png | Select Fullname -ExpandProperty Fullname
 #$files
